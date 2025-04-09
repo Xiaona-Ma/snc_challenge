@@ -6,16 +6,9 @@ from rclpy.node import Node
 class TrackingNode(Node):
 
     def __init__(self):
-        self._node_name = 'tracking_node'
-        super().__init__(self._node_name)
+        super().__init__('tracking_node')
 
-        timer_period = 0.5
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-
-    def timer_callback(self):
-        ros_time_stamp = self.get_clock().now
-        # Display the message on the console
-        self.get_logger().info(self._node_name + 'is alive... ' + str(ros_time_stamp))
+        self.get_logger().info("Tracking Node Ready")
             
 def main(args = None):
     rclpy.init(args = args)

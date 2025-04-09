@@ -5,13 +5,12 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image, LaserScan
 from visualization_msgs.msg import Marker
 from cv_bridge import CvBridge
-import tf2_ros
+from tf2_ros import TransformException, Buffer, TransformListener
 
 class DetectionNode(Node):
 
     def __init__(self):
         super().__init__('detection_node')
-        self.get_logger().info('DetectionNode is Ready!')
 
         # Subscribe to Camera
         self.img_sub = self.subscriptions(
@@ -26,9 +25,11 @@ class DetectionNode(Node):
             Marker, '/hazards', 10)
 
         # TF
-        self.tf_buffer = tf2_ros.Buffer()
-        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         
+        # Storing detected markers
+        self.marker_ids = {}
         self.bridge = CvBridge()
         self.get_logger().info("Detection Node Ready")
         
