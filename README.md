@@ -1,1 +1,1 @@
-# ros2_snc
+# snc_challenge
