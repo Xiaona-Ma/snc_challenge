@@ -21,9 +21,16 @@ class DetectionNode(Node):
         self.laser_sub = self.subscriptions(
             LaserScan, '/scan', self.laser_callback, 10)
 
-        # Issuance of hazard symbols
+        # publish the hazard symbols
         self.marker_pub = self.create_publisher(
             Marker, '/hazards', 10)
+
+        # TF
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+        
+        self.bridge = CvBridge()
+        self.get_logger().info("Detection Node Ready")
         
 
     def image_callback(self, msg):
