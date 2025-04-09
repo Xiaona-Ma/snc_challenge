@@ -2,20 +2,45 @@
 
 import rclpy
 from rclpy.node import Node
+from sensor_msgs.msg import Image, LaserScan
+from visualization_msgs.msg import Marker
+from cv_bridge import CvBridge
+import tf2_ros
 
 class DetectionNode(Node):
 
     def __init__(self):
-        self._node_name = 'detection_node'
-        super().__init__(self._node_name)
+        super().__init__('detection_node')
+        self.get_logger().info('DetectionNode is Ready!')
 
-        timer_period = 0.5
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        # Subscribe to Camera
+        self.img_sub = self.subscriptions(
+            Image, '/camera/image_raw', self.image_callback, 10)
+        
+        # Subscribe to Laser
+        self.laser_sub = self.subscriptions(
+            LaserScan, '/scan', self.laser_callback, 10)
 
-    def timer_callback(self):
-        ros_time_stamp = self.get_clock().now
-        # Display the message on the console
-        self.get_logger().info(self._node_name + 'is alive... ' + str(ros_time_stamp))
+        # Issuance of hazard symbols
+        self.marker_pub = self.create_publisher(
+            Marker, '/hazards', 10)
+        
+
+    def image_callback(self, msg):
+        # Image processing logic 
+        # TO DO...
+
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            # Call find_object_2d to detect markers...
+            # TO DO...
+        except Exception as e:
+            self.get_logger().error(f"Image processing error: {str(e)}")
+
+    def laser_callback(self, msg):
+        # Laser Data Processing
+        # TO DO...
+        pass
             
 def main(args = None):
     rclpy.init(args = args)
