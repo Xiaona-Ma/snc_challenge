@@ -41,9 +41,20 @@ class DetectionNode(Node):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
             # Call find_object_2d to detect markers...
-            # TO DO...
+            detected_markers = [
+                {"id": 1, "center_x": 320, "center_y": 240},
+                {"id": 5, "center_x": 400, "center_y": 200}
+            ]
+            for marker in detected_markers:
+                if marker["id"] not in self.marker_ids:
+                    self.publish_marker(marker)
+
         except Exception as e:
             self.get_logger().error(f"Image processing error: {str(e)}")
+    
+    def publish_marker(self, marker):
+        self.get_logger().info(f"Publishing marker: {marker}")
+        marker_msg = Marker()
 
     def laser_callback(self, msg):
         # Laser Data Processing
