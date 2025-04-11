@@ -5,7 +5,7 @@ import tf2_geometry_msgs
 import tf2_ros
 
 from rclpy.node import Node
-from std_msgs.msg import Float32MultiArray
+from find_object_2d.msg import ObjectsStamped
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 from visualization_msgs.msg import Marker
@@ -29,7 +29,7 @@ class DetectionNode(Node):
 
         # 1. Subscribe to find_object_2d output (/objects thread)
         self.objects_sub = self.create_subscription(
-            Float32MultiArray,
+           ObjectsStamped,
             '/objects',
             self.objects_callback,
             rclpy.qos.qos_profile_sensor_data  # Use sensor data QoS profile
@@ -57,8 +57,8 @@ class DetectionNode(Node):
 
     # Handle the objects detected by find_object_2d
     def objects_callback(self, msg):
-        # msg.data contains the detected objects in a Float32MultiArray format
-        self.get_logger().info(f"Objects detected: {msg.data}")
+        # msg.objectIds contains the IDs of the detected objects
+        self.get_logger().info(f"Objects detected: {msg.objectIds}")
         # Here you can process the detected objects
 
        
