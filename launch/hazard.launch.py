@@ -5,7 +5,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description() : 
      
-    image_topic = '/camera/color/image_raw'
+    image_topic = '/camera/color/image_raw/compressed'
     image_topic_repeat = image_topic + '/repeat'
     use_compressed = 'true'
 
@@ -29,10 +29,11 @@ def generate_launch_description() :
         DeclareLaunchArgument('use_compressed', default_value = use_compressed, description = 'Determine if compressed image is to be used'),
 
         # Path where you have saved the existing trained images
-        DeclareLaunchArgument('objects_path', default_value = '~/snc_challenge/trained_objects', description = 'Path to the training images'),
+        LogInfo(msg=('AIIL_CHECKOUT_DIR, ', EnvironmentVariable(name='AIIL_CHECKOUT_DIR'))),
+        DeclareLaunchArgument('objects_path', default_value = [EnvironmentVariable(name='AIIL_CHECKOUT_DIR'),'/humble_workspace/snc_challenge/trained_objects'], description = 'Path to the training images'),
 
-        # Find Object 2D Setting. By default just use the standard settings
-        DeclareLaunchArgument('settings_path', default_value = '~/.ros/find_object_2d.ini', description = 'Config file.'),      
+        # Find Object 2D Setting. By default just use the standard settingsf
+        DeclareLaunchArgument('settings_path', default_value = '~/.ros/find_object_2d.ini', description = 'Config file.'),     
 
         DeclareLaunchArgument('depth_topic', default_value = depth_topic, description = 'Depth of the object'),
         DeclareLaunchArgument('depth_topic_repeat', default_value = depth_topic_repeat, description = 'Depth of the object'),
@@ -60,7 +61,7 @@ def generate_launch_description() :
 
         Node(
             package='snc_challenge',
-            executable='detection_node',
+            executable='detection_node_executable',
             name='detection_node',
             output='screen',
             parameters=[

@@ -53,7 +53,7 @@ class DetectionNode(Node):
         # 3. Post a hazard symbol to /hazards
         self.hazard_pub = self.create_publisher( Marker, '/hazards', 10 )
 
-        self.get_logger().info("Detection Node Ready")
+        self.get_logger().info("Detection with subscription Node Ready")
 
     # Handle the objects detected by find_object_2d
     def objects_callback(self, msg):
