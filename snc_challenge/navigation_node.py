@@ -60,11 +60,11 @@ class NavigationNode(Node):
         n = len(msg.ranges)
         seg = n // 5
         self.regions_ = {
-            'right':  min(min(msg.ranges[0:seg]), 10.0),
-            'fright': min(min(msg.ranges[seg:2*seg]), 10.0),
-            'front':  min(min(msg.ranges[2*seg:3*seg]), 10.0),
-            'fleft':  min(min(msg.ranges[3*seg:4*seg]), 10.0),
-            'left':   min(min(msg.ranges[4*seg:5*seg]), 10.0),
+            'right':  min(min(msg.ranges[0:seg]), 10.0) if not math.isinf(min(msg.ranges[0:seg])) else 10.0,
+            'fright': min(min(msg.ranges[seg:2*seg]), 10.0) if not math.isinf(min(msg.ranges[seg:2*seg])) else 10.0,
+            'front':  min(min(msg.ranges[2*seg:3*seg]), 10.0) if not math.isinf(min(msg.ranges[2*seg:3*seg])) else 10.0,
+            'fleft':  min(min(msg.ranges[3*seg:4*seg]), 10.0) if not math.isinf(min(msg.ranges[3*seg:4*seg])) else 10.0,
+            'left':   min(min(msg.ranges[4*seg:5*seg]), 10.0) if not math.isinf(min(msg.ranges[4*seg:5*seg])) else 10.0,
         }
         self.take_action()
 
