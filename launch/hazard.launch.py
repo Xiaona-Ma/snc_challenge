@@ -33,7 +33,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'subscribe_depth': False,  # 是否订阅深度信息（此处用激光雷达替代）
-                'gui': 'false',           # 关闭GUI以节省资源
+                'gui': False,           # 关闭GUI以节省资源
                 'objects_path': LaunchConfiguration('objects_path'),
             }],
             remappings=[
@@ -45,10 +45,11 @@ def generate_launch_description():
         Node(
             package='aiil_rosbot_demo',
             executable='best_effort_repeater',
-            name='image_repeater',
+            name='best_effort_repeater',
+            output='screen',
             parameters=[
                 {'sub_topic_name': LaunchConfiguration('image_topic')},
-                {'repeat_topic_name': '/image_repeat'},
+                {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
                 {'use_compressed': LaunchConfiguration('use_compressed')},
             ]
         ),
@@ -56,7 +57,7 @@ def generate_launch_description():
         # 启动自定义检测节点
         Node(
             package='snc_challenge',
-            executable='detection_node',
+            executable='detection_node_executable',
             output='screen',
             parameters=[{
                 'marker_frame': 'camera_link',  # 摄像头坐标系
