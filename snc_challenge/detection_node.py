@@ -133,8 +133,8 @@ class DetectionNode(Node):
                     self._process_start_marker(obj, msg.header)
                     continue
                 
+                # If the marker is not "start", process it normally
                 else:
-
                     # Calculate the centre point of the bounding box
                     cx = int((obj["bbox"][0] + obj["bbox"][2]) / 2)
                     cy = int((obj["bbox"][1] + obj["bbox"][3]) / 2)
