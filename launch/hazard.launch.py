@@ -54,33 +54,18 @@ def generate_launch_description() :
               'settings_path': LaunchConfiguration('settings_path')         # Path to the config file
             }],
             remappings=[
-                ('image', LaunchConfiguration('image_topic_repeat')),
-                # ('depth_registered/image_raw', LaunchConfiguration('depth_topic_repeat')),
-                # ('depth_registered/camera_info', LaunchConfiguration('camera_info_topic_repeat')),
+                ('image', LaunchConfiguration('image_topic_repeat'))
         ]),
-        
-        # Best Effort repeater since find_object ONLY uses reliable QoS
-        Node(
-            package='snc_challenge',
-            executable='best_effort_repeater',
-            name='best_effort_repeater',
-            output='screen',
-            parameters=[
-                {'sub_topic_name': LaunchConfiguration('image_topic')},
-                {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
-                {'use_compressed': LaunchConfiguration('use_compressed')},
-            ]
-        ),
 
         Node(
             package='snc_challenge',
-            executable='detection_node_executable',
-            name='detection_node',
+            executable='hazard_detector',
+            name='hazard_detector',
             output='screen',
             parameters=[
                 {'sub_topic_name': LaunchConfiguration('image_topic')},
                 {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
                 {'use_compressed': LaunchConfiguration('use_compressed')},
             ]
-        ),
+        )
     ])
