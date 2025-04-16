@@ -20,7 +20,7 @@ class DetectionNode(Node):
         # 1. Subscribe to find_object_2d output (/objects thread)
         self.objects_sub = self.create_subscription(
            ObjectsStamped,
-            '/detections',
+            '/objectsStamped',
             self.objects_callback,
             rclpy.qos.qos_profile_sensor_data  # Use sensor data QoS profile
         )
@@ -55,41 +55,44 @@ class DetectionNode(Node):
         # Storage of detected flag IDs (to avoid double posting)
         self.detected_ids = set()
 
-        self.get_logger().info("Detection with subscription Node Ready")
+        self.get_logger().info("########## Detection with subscription Node Ready ##########")
 
     # Handle the objects detected by find_object_2d
     def objects_callback(self, msg):
+
+        self.get_logger().warn("########## objects_callback ##########")
+
         if self.camera_model is None or self.current_depth_image is None:
             self.get_logger().warn("等待深度图像或相机参数...")
             return
         
-        # 遍历检测到的所有对象
+        # Iterate over all objects detected
         for i in range(len(msg.objectIds)):
-            marker_id = msg.objectIds[i]  # 提取对象ID
+            marker_id = msg.objectIds[i]    # Object ID
             
-            # 从 homography 矩阵提取平移分量 (h31, h32)
-            h31 = msg.h31[i]  # dx (像素坐标x)
-            h32 = msg.h32[i]  # dy (像素坐标y)
+            # Extraction of translation components from homography matrix (h31, h32)
+            h31 = msg.h31[i]  # dx
+            h32 = msg.h32[i]  # dy
             center_x = int(h31)
             center_y = int(h32)
             
-            # 从深度图像获取距离（单位：米）
+            # Note: Depth images are in millimetres so need to be divided by 1000
             depth = self.current_depth_image[center_y, center_x] / 1000.0
             
-            # 像素坐标转3D坐标（摄像头坐标系）
+            # Pixel coordinates to 3D coordinates (camera coordinate system)
             ray = self.camera_model.projectPixelTo3dRay((center_x, center_y))
             point_camera = [ray[0] * depth, ray[1] * depth, depth]
             
-            # 转换到 map 坐标系
+            # Transform the point from camera frame to map frame
             try:
                 transform = self.tf_buffer.lookup_transform(
                     'map',
-                    msg.header.frame_id,  # 使用消息中的帧ID
-                    msg.header.stamp,     # 使用消息中的时间戳
+                    msg.header.frame_id,
+                    msg.header.stamp,
                     timeout=rclpy.duration.Duration(seconds=1.0)
                 )
                 
-                # 构建 PointStamped
+                # Creating a PointStamped Message
                 point_camera_stamped = PointStamped()
                 point_camera_stamped.header = msg.header
                 point_camera_stamped.point = Point(
@@ -98,13 +101,13 @@ class DetectionNode(Node):
                     z=point_camera[2]
                 )
                 
-                # 执行坐标变换
+                # transform the 
                 point_map = tf2_geometry_msgs.do_transform_point(
                     point_camera_stamped,
                     transform
                 ).point
                 
-                # 发布危险标志
+                # publish hazard marker
                 self.publish_hazard_marker(marker_id, point_map.x, point_map.y)
                 
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, 
@@ -115,7 +118,7 @@ class DetectionNode(Node):
     # Handle the depth image
     def depth_callback(self, msg):
         # msg contains the depth image in a ROS Image format
-        self.get_logger().info("Depth image received")
+        self.get_logger().info("########## Depth image received ##########")
         
         # Convert the ROS Image message to a CV image
         try:
@@ -127,46 +130,47 @@ class DetectionNode(Node):
     # Handle the camera info
     def camera_info_callback(self, msg):
         # msg contains the camera info in a ROS CameraInfo format
-        self.get_logger().info("Camera info received")
+        self.get_logger().info("########## Camera info received ##########")
 
-        # 解析相机参数，用于深度图像坐标转换
+        # Convert the ROS CameraInfo message to a PinholeCameraModel
         self.camera_model = PinholeCameraModel()
         self.camera_model.fromCameraInfo(msg)
 
 
     def publish_hazard_marker(self, marker_id, x, y):
+
+        self.get_logger().info("########## publish_hazard_marker ##########")
+        
         if marker_id in self.detected_ids:
-            return  # 避免重复发布
+            return
         
         marker = Marker()
         marker.header.frame_id = "map"
         marker.header.stamp = self.get_clock().now().to_msg()
-        marker.type = Marker.CUBE
+        marker.type = Marker.SPHERE
         marker.action = Marker.ADD
-        marker.id = marker_id  # 根据PDF中的ID表设置
-        
-        # 位置和尺寸
+        marker.id = marker_id
+
         marker.pose.position.x = x
         marker.pose.position.y = y
         marker.pose.position.z = 0.0
-        marker.scale.x = 0.3
-        marker.scale.y = 0.3
-        marker.scale.z = 0.1
+        marker.pose.orientation.x = 0.0
+        marker.pose.orientation.y = 0.0
+        marker.pose.orientation.z = 0.0
+        marker.pose.orientation.w = 1.0
         
-        # 根据ID设置颜色
-        if marker_id == 1:   # Explosive
-            marker.color.r = 1.0
-            marker.color.g = 0.0
-            marker.color.b = 0.0
-        elif marker_id == 2: # Flammable Gas
-            marker.color.r = 1.0
-            marker.color.g = 1.0
-            marker.color.b = 0.0
-        # ...其他ID的颜色设置
+        marker.scale.x = 1.0 
+        marker.scale.y = 1.0
+        marker.scale.z = 1.0
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
         
-        marker.color.a = 1.0  # 不透明度
+        # Infinite lifetime
+        marker.lifetime.sec = 0
         
-        # 发布Marker
+        # publish Marker
         self.hazard_pub.publish(marker)
         self.detected_ids.add(marker_id)
         self.get_logger().info(f"发布危险标志ID {marker_id} 在 ({x:.2f}, {y:.2f})")        
