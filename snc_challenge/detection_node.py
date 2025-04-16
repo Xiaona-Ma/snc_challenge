@@ -9,8 +9,6 @@ from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import PointStamped
 from cv_bridge import CvBridge
 from std_msgs.msg import Float32MultiArray
-import tf2_geometry_msgs 
-import cv2
 import numpy as np
 
 class DetectionNode(Node):
