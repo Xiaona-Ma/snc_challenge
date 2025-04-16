@@ -30,7 +30,7 @@ def generate_launch_description() :
 
         # Path where you have saved the existing trained images
         LogInfo(msg=('AIIL_CHECKOUT_DIR, ', EnvironmentVariable(name='AIIL_CHECKOUT_DIR'))),
-        DeclareLaunchArgument('objects_path', default_value = [EnvironmentVariable(name='AIIL_CHECKOUT_DIR'),'/humble_workspace/snc_challenge/trained_objects'], description = 'Path to the training images'),
+        DeclareLaunchArgument('objects_path', default_value = [EnvironmentVariable(name='AIIL_CHECKOUT_DIR'),'/humble_workspace/src/snc_challenge/trained_objects'], description = 'Path to the training images'),
 
         # Find Object 2D Setting. By default just use the standard settingsf
         DeclareLaunchArgument('settings_path', default_value = '~/.ros/find_object_2d.ini', description = 'Config file.'),     
