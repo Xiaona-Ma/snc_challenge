@@ -10,10 +10,16 @@ from tf2_ros import Buffer, TransformListener, TransformException
 import tf2_geometry_msgs
 import cv2
 import numpy as np
+from std_msgs.msg import Empty
 
 class DetectionNode(Node):
     def __init__(self):
         super().__init__('detection_node')
+
+        self.create_subscription(Empty,
+                         '/trigger_start',
+                         self._trigger_start_callback,
+                         10)
         
         # initialize parameters and tools
         self.bridge = CvBridge()
@@ -59,9 +65,34 @@ class DetectionNode(Node):
         
         
         self.get_logger().info("========== Detection Node Ready ===========")
+
+    def _trigger_start_callback(self, msg):
+        # 当收到 /trigger_start 时，查询机器人当前位置（base_link → map），并把这个点发布到 /start_marker。
+        try:
+            # 查最新的 base_link → map 变换
+            tf = self.tf_buffer.lookup_transform(
+                'map',              # 目标坐标系
+                'base_link',        # 源坐标系
+                rclpy.time.Time(),  # 最新时刻
+                timeout=rclpy.duration.Duration(seconds=0.1)
+            )
+            # 提取位置
+            t = tf.transform.translation
+            start_msg = PointStamped()
+            start_msg.header.frame_id = 'map'
+            start_msg.header.stamp = self.get_clock().now().to_msg()
+            start_msg.point.x = t.x
+            start_msg.point.y = t.y
+            start_msg.point.z = t.z
+            # 发布给 RViz
+            self.start_pub.publish(start_msg)
+            self.get_logger().info("触发 Start Marker 发布 at ({:.2f}, {:.2f}, {:.2f})"
+                                .format(t.x, t.y, t.z))
+        except Exception as e:
+            self.get_logger().warn(f"trigger_start TF 失败: {e}")
     
 
-    def object_detection_callback(self, msg: Float32MultiArray):
+    def object_detection_callback(self, msg):
 
         self.last_detections.clear()
         data = msg.data
@@ -79,7 +110,7 @@ class DetectionNode(Node):
             self.last_detections.append(obj)
 
 
-    def camera_info_callback(self, msg: CameraInfo):
+    def camera_info_callback(self, msg):
         # Camera internal parameters stored only on first reception
         if not self.camera_info:
             self.camera_info = {
