@@ -24,7 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             f'navigation_node_executable = {package_name}.navigation_node:main',
-            f'detection_node_executable = {package_name}.detection_node:main',
+            f'detection_node = {package_name}.detection_node:main',
             f'tracking_node_executable = {package_name}.tracking_node:main',
         ],
     },
