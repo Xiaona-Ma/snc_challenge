@@ -64,7 +64,7 @@ def generate_launch_description() :
             parameters=[
                 {'sub_topic_name': LaunchConfiguration('depth_topic')},
                 {'repeat_topic_name': depth_topic_repeat},
-                {'use_compressed': 'false'},    # depth itself is not a compressed format
+                {'use_compressed': False},    # depth itself is not a compressed format
             ]
         ),
 

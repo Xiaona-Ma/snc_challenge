@@ -209,7 +209,7 @@ class DetectionNode(Node):
         return Point(x = x, y = y, z = 0.0)
     
    
-    def _get_marker_name_by_id(self, find_object_id):
+    def _get_marker_name(self, find_object_id):
         # Map find_object_2d's internal ID to the marker name defined in the PDF
         id_to_name = {
             0: "unknown",
