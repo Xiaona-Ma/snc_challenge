@@ -18,9 +18,9 @@ class NavigationNode(Node):
         self.create_timer(0.1, self.take_action)  # Control loop at 2 Hz
 
         # --- PARAMETERS ---
-        self.wall_min_distance = 0.4      # desired minimum distance to wall (m)
-        self.d_threshold = 1.0            # obstacle threshold in front (m)
-        self.forward_speed = 0.3          # linear speed
+        self.wall_min_distance = 0.35      # desired minimum distance to wall (m)
+        self.d_threshold = 0.8            # obstacle threshold in front (m)
+        self.forward_speed = 0.1          # linear speed
         self.turning_speed = 0.8          # angular speed
         self.lidar_angle_offset = math.pi # set to π if LiDAR is mounted backwards
 
@@ -107,10 +107,10 @@ class NavigationNode(Node):
 
         # --- Right-wall-following logic ---
 
-        # 1. Clear front and right → turn right (and fright must be clear too)
-        if front_clear and right_clear and fright_clear:
-            cmd.linear.x = 0.2
-            cmd.angular.z = -self.turning_speed
+        # 1. Clear right → turn right (and fright must be clear too)
+        if right_clear and fright_clear and (front > 0.3):
+            cmd.linear.x = 0.15
+            cmd.angular.z = -0.3
             self.change_state(1)
             self.cmd_pub.publish(cmd)
             msg = "Turn Right (path clear)"
@@ -119,7 +119,7 @@ class NavigationNode(Node):
             return
 
         # 2. Front blocked → turn left 
-        if front_blocked:
+        if front_blocked and fright_close:
             cmd.linear.x = 0.0
             cmd.angular.z = self.turning_speed
             self.change_state(1)
@@ -130,9 +130,9 @@ class NavigationNode(Node):
             return
 
         # 3. Wall close on the right, path ahead is clear → follow wall forward
-        if right_wall_close and front_clear:
+        if right_wall_close and fright_close and front_clear:
             cmd.linear.x = self.forward_speed
-            cmd.angular.z = 0.2
+            cmd.angular.z = 0.0
             self.change_state(0)
             self.cmd_pub.publish(cmd)
             msg = "Follow Wall Forward"
