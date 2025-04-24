@@ -92,10 +92,10 @@ class DetectionNode(Node):
             self.status_pub.publish(String(data="======== 收到 trigger_start，发布 Start Marker ========"))
             # 发布给 RViz
             self.start_marker_pub.publish(start_msg)
-            self.get_logger().info("触发 Start Marker 发布 at ({:.2f}, {:.2f}, {:.2f})"
+            self.get_logger().info("======== 触发 Start Marker 发布 at ({:.2f}, {:.2f}, {:.2f})======== "
                                 .format(t.x, t.y, t.z))
         except Exception as e:
-            self.get_logger().warn(f"trigger_start TF 失败: {e}")
+            self.get_logger().warn(f"======== trigger_start TF 失败: {e}======== ")
     
 
     def object_detection_callback(self, msg):
@@ -133,7 +133,7 @@ class DetectionNode(Node):
         # Store depth images (add filter processing)
         cvd = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
         self.current_depth = cv2.medianBlur(cvd, 5)
-        self.get_logger().info("--- Depth images have been acquired ---")
+        self.get_logger().info("======== Depth images have been acquired ========")
         self.status_pub.publish(String(data="========== 已获取深度图 =========="))
 
 
@@ -226,7 +226,7 @@ class DetectionNode(Node):
         depth_val = float(np.nanmedian(roi)) / 1000.0  # mm → m
         # 深度有效性检查
         if depth_val <= 0.0 or depth_val > 5.0:
-            self.get_logger().warn(f"Start 标志深度异常：{depth_val}")
+            self.get_logger().warn(f"======== Start 标志深度异常：{depth_val} ========")
             return
 
         # 3. 像素 → 相机坐标
@@ -246,7 +246,7 @@ class DetectionNode(Node):
             )
             point_map = tf2_geometry_msgs.do_transform_point(point_cam, tf)
         except TransformException as e:
-            self.get_logger().warn(f"Start 标志 TF 转换失败：{e}")
+            self.get_logger().warn(f"======== Start 标志 TF 转换失败：{e} ========")
             return
 
         # 5. 发布到 /start_marker
@@ -255,7 +255,7 @@ class DetectionNode(Node):
         start_msg.header.stamp = self.get_clock().now().to_msg()
         start_msg.point = point_map.point
         self.start_marker_pub.publish(start_msg)
-        self.get_logger().info("Start Marker 已检测并发布！")
+        self.get_logger().info("========  Start Marker 已检测并发布！ ========")
 
 
     def _avg_point(self, points):
