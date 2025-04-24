@@ -18,11 +18,11 @@ class DetectionNode(Node):
     def __init__(self):
         super().__init__('detection_node')
 
-        # self.create_subscription(
-        #     Empty,
-        #     '/trigger_start',
-        #     self._trigger_start_callback,
-        #     10)
+        self.create_subscription(
+            Empty,
+            '/trigger_start',
+            self._trigger_start_callback,
+            10)
         
         # initialize parameters and tools
         self.bridge = CvBridge()
@@ -71,32 +71,32 @@ class DetectionNode(Node):
         self.get_logger().info("========== Detection Node Ready ===========")
         self.status_pub.publish(String(data="========== DetectionNode 已初始化，等待输入数据 =========="))
 
-    # def _trigger_start_callback(self, msg):
-    #     # 当收到 /trigger_start 时，查询机器人当前位置（base_link → map），并把这个点发布到 /start_marker。
-    #     try:
-    #         # 查最新的 base_link → map 变换
-    #         tf = self.tf_buffer.lookup_transform(
-    #             'map',              # 目标坐标系
-    #             'base_link',        # 源坐标系
-    #             Time(),  # 最新时刻
-    #             timeout = Duration(seconds=0.1)
-    #         )
-    #         # 提取位置
-    #         t = tf.transform.translation
-    #         start_msg = PointStamped()
-    #         start_msg.header.frame_id = 'map'
-    #         start_msg.header.stamp = self.get_clock().now().to_msg()
-    #         start_msg.point.x = t.x
-    #         start_msg.point.y = t.y
-    #         start_msg.point.z = t.z
+    def _trigger_start_callback(self, msg):
+        # 当收到 /trigger_start 时，查询机器人当前位置（base_link → map），并把这个点发布到 /start_marker。
+        try:
+            # 查最新的 base_link → map 变换
+            tf = self.tf_buffer.lookup_transform(
+                'map',              # 目标坐标系
+                'base_link',        # 源坐标系
+                Time(),  # 最新时刻
+                timeout = Duration(seconds=0.1)
+            )
+            # 提取位置
+            t = tf.transform.translation
+            start_msg = PointStamped()
+            start_msg.header.frame_id = 'map'
+            start_msg.header.stamp = self.get_clock().now().to_msg()
+            start_msg.point.x = t.x
+            start_msg.point.y = t.y
+            start_msg.point.z = t.z
 
-    #         self.status_pub.publish(String(data="======== 收到 trigger_start，发布 Start Marker ========"))
-    #         # 发布给 RViz
-    #         self.start_marker_pub.publish(start_msg)
-    #         self.get_logger().info("======== 触发 Start Marker 发布 at ({:.2f}, {:.2f}, {:.2f})======== "
-    #                             .format(t.x, t.y, t.z))
-    #     except Exception as e:
-    #         self.get_logger().warn(f"======== trigger_start TF 失败: {e}======== ")
+            self.status_pub.publish(String(data="======== 收到 trigger_start，发布 Start Marker ========"))
+            # 发布给 RViz
+            self.start_marker_pub.publish(start_msg)
+            self.get_logger().info("======== 触发 Start Marker 发布 at ({:.2f}, {:.2f}, {:.2f})======== "
+                                .format(t.x, t.y, t.z))
+        except Exception as e:
+            self.get_logger().warn(f"======== trigger_start TF 失败: {e}======== ")
     
 
     def object_detection_callback(self, msg):
