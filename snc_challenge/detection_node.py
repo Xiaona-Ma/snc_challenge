@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
+from rclpy.time import Time
 from rclpy.duration import Duration
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Float32MultiArray
@@ -77,7 +78,7 @@ class DetectionNode(Node):
             tf = self.tf_buffer.lookup_transform(
                 'map',              # 目标坐标系
                 'base_link',        # 源坐标系
-                self.get_clock().now().to_msg(),  # 最新时刻
+                Time(),  # 最新时刻
                 timeout = Duration(seconds=0.1)
             )
             # 提取位置
