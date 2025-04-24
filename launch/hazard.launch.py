@@ -2,6 +2,8 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, LogInfo
 from launch.substitutions import LaunchConfiguration, EnvironmentVariable
 from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+import os
 
 def generate_launch_description() : 
     
@@ -32,10 +34,28 @@ def generate_launch_description() :
             name='static_map_to_base_link',
             output='screen',
             arguments=[
-                '0', '0', '0',    # x y z
-                '0', '0', '0', '1', # 四元数 qx qy qz qw（身份旋转）
-                'map',            # parent frame
-                'base_link'       # child frame
+                # x y z qx qy qz qw parent child period
+                '0','0','0',  
+                '0','0','0','1',  
+                'map',
+                'base_link',
+                '0.05'
+            ]
+        ),
+
+        # slam_toolbox 在线建图
+        Node(
+            package='slam_toolbox',
+            executable='async_slam_toolbox_node',
+            name='slam_toolbox',
+            output='screen',
+            parameters=[
+            os.path.join(
+                get_package_share_directory('snc_challenge'),
+                'config','slam.yaml'
+            ),
+            {'mode':'mapping'},         # mapping 模式
+            {'use_sim_time': False},
             ]
         ),
 
