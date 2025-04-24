@@ -7,8 +7,10 @@ def generate_launch_description() :
     
     ### --- Topic and parameter definitions --- ###
     # Original topic
-    image_topic = '/camera/color/image_raw/compressed'
-    depth_topic = '/camera/depth/image_raw'
+    image_topic = '/camera/color/image_raw'
+    depth_topic = '/camera/depth/image_raw/compressed'
+    # image_topic = '/camera/color/image_raw/compressed'
+    # depth_topic = '/camera/depth/image_raw'
     camera_info_topic = '/camera/depth/camera_info'
 
     # Repeat topic
@@ -53,7 +55,7 @@ def generate_launch_description() :
             parameters=[
                 {'sub_topic_name': LaunchConfiguration('image_topic')},
                 {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
-                {'use_compressed': LaunchConfiguration('use_compressed')},
+                {'use_compressed': False},  # 原始流是未压缩的 Image
             ]
         ),
 
@@ -66,33 +68,20 @@ def generate_launch_description() :
             parameters=[
                 {'sub_topic_name': LaunchConfiguration('depth_topic')},
                 {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
-                {'use_compressed': False},    # depth itself is not a compressed format
+                {'use_compressed': True},    # 这是 CompressedImage，需要解码
             ]
         ),
-
-        # --- Best Effort Repeater for Camera Info (to reliable) --- #
-        # Node(
-        #     package='aiil_rosbot_demo', 
-        #     executable='best_effort_repeater',
-        #     name='camera_info_repeater',
-        #     output='screen',
-        #     parameters=[
-        #         {'sub_topic_name': LaunchConfiguration('camera_info_topic')},
-        #         {'repeat_topic_name': LaunchConfiguration('camera_info_topic_repeat')},
-        #         {'use_compressed': False},    # depth itself is not a compressed format
-        #     ]
-        # ),
 
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='static_map_to_odom',
+            name='static_map_to_base_link',
             output='screen',
             arguments=[
                 '0', '0', '0',    # x y z
                 '0', '0', '0',    # roll pitch yaw
                 'map',            # parent frame
-                'odom'            # child frame
+                'base_link'            # child frame
             ]
         ),
 
