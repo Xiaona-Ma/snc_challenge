@@ -7,6 +7,8 @@ from std_msgs.msg import String
 from nav_msgs.msg import Path
 import tf2_ros
 import math
+# getting map when shut down
+import subprocess
 
 class NavigationNode(Node):
 
@@ -15,7 +17,7 @@ class NavigationNode(Node):
         self.get_logger().info('Navigation Node Ready')
 
         # --- TIMER ---
-        self.create_timer(0.1, self.take_action)  # Control loop at 2 Hz
+        self.create_timer(0.3, self.take_action) 
 
         # --- PARAMETERS ---
         self.wall_min_distance = 0.35      # desired minimum distance to wall (m)
@@ -182,6 +184,20 @@ class NavigationNode(Node):
             self.path_pub.publish(self.path_msg)
         except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
             pass
+
+
+    # save map when finished running (TEST)
+    def destroy_node(self):
+        self.get_logger().info("Navigation node shutting down... Saving map.")
+        try:
+            subprocess.run([
+                "ros2", "run", "nav2_map_server", "map_saver_cli", "-f", "auto_saved_map"
+            ], check=True)
+            self.get_logger().info("Map saved successfully as 'auto_saved_map'.")
+        except subprocess.CalledProcessError as e:
+            self.get_logger().error(f"Failed to save map: {e}")
+        super().destroy_node()
+
 
 def main(args=None):
     rclpy.init(args=args)
