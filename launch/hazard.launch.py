@@ -23,6 +23,20 @@ def generate_launch_description() :
 
 
     return LaunchDescription([
+        # —— 静态广播 map → base_link —— #
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='static_map_to_base_link',
+            output='screen',
+            arguments=[
+                '0', '0', '0',    # x y z
+                '0', '0', '0',    # roll pitch yaw
+                'map',            # parent frame
+                'base_link'       # child frame
+            ]
+        ),
+        
         # --- Log Output Settings --- #
         SetEnvironmentVariable('RCUTILS_LOGGING_USE_STDOUT', '1'),
         SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '0'),
@@ -69,19 +83,6 @@ def generate_launch_description() :
                 {'sub_topic_name': LaunchConfiguration('depth_topic')},
                 {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
                 {'use_compressed': True},    # 这是 CompressedImage，需要解码
-            ]
-        ),
-
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='static_map_to_base_link',
-            output='screen',
-            arguments=[
-                '0', '0', '0',    # x y z
-                '0', '0', '0',    # roll pitch yaw
-                'map',            # parent frame
-                'base_link'            # child frame
             ]
         ),
 
