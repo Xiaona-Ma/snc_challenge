@@ -7,11 +7,13 @@ def generate_launch_description() :
     
     ### --- Topic and parameter definitions --- ###
     # Original topic
-    image_topic = '/camera/color/image_raw'
-    depth_topic = '/camera/depth/image_raw/compressed'
-    # image_topic = '/camera/color/image_raw/compressed'
-    # depth_topic = '/camera/depth/image_raw'
+    image_topic = '/oak/rgb/image_raw/compressed'
+    depth_topic = '/camera/depth/image_raw'
     camera_info_topic = '/camera/depth/camera_info'
+
+    # image_topic = '/camera/color/image_raw'
+    # depth_topic = '/camera/depth/image_raw/compressed'
+    # camera_info_topic = '/camera/depth/camera_info'
 
     # Repeat topic
     image_topic_repeat = image_topic + '/repeat'
