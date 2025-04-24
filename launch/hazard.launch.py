@@ -39,21 +39,21 @@ def generate_launch_description() :
             ]
         ),
 
-        Node(
-            package='slam_toolbox',
-            executable='async_slam_toolbox_node',
-            name='slam_toolbox',
-            output='screen',
-            parameters=[
-            os.path.join(
-                get_package_share_directory('snc_challenge'),
-                'config',
-                'slam.yaml'
-            ),
-            {'mode':'mapping'},         # mapping 模式
-            {'use_sim_time': False},
-            ]
-        ),
+        # Node(
+        #     package='slam_toolbox',
+        #     executable='async_slam_toolbox_node',
+        #     name='slam_toolbox',
+        #     output='screen',
+        #     parameters=[
+        #     os.path.join(
+        #         get_package_share_directory('snc_challenge'),
+        #         'config',
+        #         'slam.yaml'
+        #     ),
+        #     {'mode':'mapping'},         # mapping 模式
+        #     {'use_sim_time': False},
+        #     ]
+        # ),
 
         # --- Log Output Settings --- #
         SetEnvironmentVariable('RCUTILS_LOGGING_USE_STDOUT', '1'),
