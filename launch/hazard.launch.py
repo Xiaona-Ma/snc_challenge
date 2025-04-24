@@ -43,7 +43,6 @@ def generate_launch_description() :
             ]
         ),
 
-        # slam_toolbox 在线建图
         Node(
             package='slam_toolbox',
             executable='async_slam_toolbox_node',
@@ -52,7 +51,8 @@ def generate_launch_description() :
             parameters=[
             os.path.join(
                 get_package_share_directory('snc_challenge'),
-                'config','slam.yaml'
+                'config',
+                'slam.yaml'
             ),
             {'mode':'mapping'},         # mapping 模式
             {'use_sim_time': False},
