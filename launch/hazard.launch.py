@@ -83,6 +83,19 @@ def generate_launch_description() :
         #     ]
         # ),
 
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='static_map_to_odom',
+            output='screen',
+            arguments=[
+                '0', '0', '0',    # x y z
+                '0', '0', '0',    # roll pitch yaw
+                'map',            # parent frame
+                'odom'            # child frame
+            ]
+        ),
+
 
         # --- Target Detection Node: find_object_2d --- #
         Node(
