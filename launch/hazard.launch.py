@@ -31,12 +31,12 @@ def generate_launch_description() :
             output='screen',
             arguments=[
                 '0', '0', '0',    # x y z
-                '0', '0', '0',    # roll pitch yaw
+                '0', '0', '0', '1', # 四元数 qx qy qz qw（身份旋转）
                 'map',            # parent frame
                 'base_link'       # child frame
             ]
         ),
-        
+
         # --- Log Output Settings --- #
         SetEnvironmentVariable('RCUTILS_LOGGING_USE_STDOUT', '1'),
         SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '0'),
