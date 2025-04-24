@@ -115,5 +115,5 @@ def generate_launch_description() :
             ],
         ),
 
-        LogInfo(msg='—— hazard.launch.py Startup Complete. ——'),
+        LogInfo(msg='========== hazard.launch.py Startup Complete. =========='),
     ])
