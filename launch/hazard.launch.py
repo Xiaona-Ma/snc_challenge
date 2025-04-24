@@ -31,9 +31,11 @@ def generate_launch_description() :
         DeclareLaunchArgument('depth_topic', default_value=depth_topic, description='Original depth map topic。'),
         DeclareLaunchArgument('camera_info_topic', default_value=camera_info_topic, description='Original camera internal parameters topic.'),
         DeclareLaunchArgument('use_compressed', default_value=use_compressed, description='Determine if compressed image is to be used.'),
-        # DeclareLaunchArgument('image_topic_repeat', default_value=image_topic_repeat,description='Image to repeat to for find object (reliable).'),
-        # DeclareLaunchArgument('depth_topic_repeat', default_value=depth_topic_repeat,description='depth map topic (reliable).'),
+        
+        DeclareLaunchArgument('image_topic_repeat', default_value=image_topic_repeat,description='Image to repeat to for find object (reliable).'),
+        DeclareLaunchArgument('depth_topic_repeat', default_value=depth_topic_repeat,description='depth map topic (reliable).'),
         # DeclareLaunchArgument('camera_info_topic_repeat', default_value=camera_info_topic_repeat,description='camera internal parameters topic (reliable).'),
+        DeclareLaunchArgument('objects_topic', default_value='/objects', description='find_object_2d topic.'),
 
 
         # Path where you have saved the existing trained images
@@ -50,12 +52,12 @@ def generate_launch_description() :
             output='screen',
             parameters=[
                 {'sub_topic_name': LaunchConfiguration('image_topic')},
-                {'repeat_topic_name': image_topic_repeat},
+                {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
                 {'use_compressed': LaunchConfiguration('use_compressed')},
             ]
         ),
 
-        # --- Best Effort Repeater for Camera Info (to reliable) --- #
+        # --- Best Effort Repeater for Depth Info (to reliable) --- #
         Node(
             package='aiil_rosbot_demo', 
             executable='best_effort_repeater',
@@ -63,10 +65,23 @@ def generate_launch_description() :
             output='screen',
             parameters=[
                 {'sub_topic_name': LaunchConfiguration('depth_topic')},
-                {'repeat_topic_name': depth_topic_repeat},
+                {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
                 {'use_compressed': False},    # depth itself is not a compressed format
             ]
         ),
+
+        # --- Best Effort Repeater for Camera Info (to reliable) --- #
+        # Node(
+        #     package='aiil_rosbot_demo', 
+        #     executable='best_effort_repeater',
+        #     name='camera_info_repeater',
+        #     output='screen',
+        #     parameters=[
+        #         {'sub_topic_name': LaunchConfiguration('camera_info_topic')},
+        #         {'repeat_topic_name': LaunchConfiguration('camera_info_topic_repeat')},
+        #         {'use_compressed': False},    # depth itself is not a compressed format
+        #     ]
+        # ),
 
 
         # --- Target Detection Node: find_object_2d --- #
@@ -91,15 +106,12 @@ def generate_launch_description() :
             name='detection_node',
             output='screen',
             remappings=[
-                # float32 detections
-                ('/objects',             '/objects'),
-                # RGB / depth / camera_info
-                ('/image_topic_repeat',      image_topic_repeat),
-                ('/depth_topic_repeat',      depth_topic_repeat),
-                ('/camera_info_topic_repeat',LaunchConfiguration('camera_info_topic')),
-                # publish
-                ('/hazards',             '/hazards'),
-                ('/start_marker',        '/start_marker'),
+                ('objects',      LaunchConfiguration('objects_topic')),
+                ('image',        LaunchConfiguration('image_topic_repeat')),
+                ('depth',        LaunchConfiguration('depth_topic_repeat')),
+                ('camera_info',  LaunchConfiguration('camera_info_topic')),
+                ('hazards',      'hazards'),
+                ('start_marker', 'start_marker'),
             ],
         ),
 
