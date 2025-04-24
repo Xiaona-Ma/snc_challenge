@@ -60,7 +60,7 @@ def generate_launch_description() :
         SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '0'),
 
         # --- Launch Arguments --- #
-        DeclareLaunchArgument('gui', default_value='false', description='Launch GUI.'),
+        DeclareLaunchArgument('gui', default_value='true', description='Launch GUI.'),
         DeclareLaunchArgument('image_topic', default_value=image_topic, description='Image topic from the camera (best_effort).'),
         DeclareLaunchArgument('depth_topic', default_value=depth_topic, description='Original depth map topic。'),
         DeclareLaunchArgument('camera_info_topic', default_value=camera_info_topic, description='Original camera internal parameters topic.'),
@@ -117,7 +117,7 @@ def generate_launch_description() :
               'settings_path': LaunchConfiguration('settings_path')         # Path to the config file
             }],
             remappings=[
-                ('image', image_topic_repeat)
+                ('image', LaunchConfiguration('image_topic_repeat'))
         ]),
 
         # --- Hazard Sign Detection Node: detection_node --- #
