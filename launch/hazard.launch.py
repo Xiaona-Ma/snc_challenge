@@ -78,32 +78,6 @@ def generate_launch_description() :
         # Find Object 2D Setting. By default just use the standard settings
         DeclareLaunchArgument('settings_path', default_value = '~/.ros/find_object_2d.ini', description = 'Config file.'),     
 
-        # --- Best Effort Repeater for Image (to reliable) --- #
-        # Node(
-        #     package='aiil_rosbot_demo',
-        #     executable='best_effort_repeater',
-        #     name='image_repeater',
-        #     output='screen',
-        #     parameters=[
-        #         {'sub_topic_name': LaunchConfiguration('image_topic')},
-        #         {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
-        #         {'use_compressed': False},  # 原始流是未压缩的 Image
-        #     ]
-        # ),
-
-        # --- Best Effort Repeater for Depth Info (to reliable) --- #
-        # Node(
-        #     package='aiil_rosbot_demo', 
-        #     executable='best_effort_repeater',
-        #     name='depth_repeater',
-        #     output='screen',
-        #     parameters=[
-        #         {'sub_topic_name': LaunchConfiguration('depth_topic')},
-        #         {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
-        #         {'use_compressed': True},    # 这是 CompressedImage，需要解码
-        #     ]
-        # ),
-
 
         # --- Target Detection Node: find_object_2d --- #
         Node(
@@ -133,6 +107,19 @@ def generate_launch_description() :
             ]
         ),
 
+        # --- Best Effort Repeater for Depth Info (to reliable) --- #
+        Node(
+            package='aiil_rosbot_demo', 
+            executable='best_effort_repeater',
+            name='depth_repeater',
+            output='screen',
+            parameters=[
+                {'sub_topic_name': LaunchConfiguration('depth_topic')},
+                {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
+                {'use_compressed': True},    # 这是 CompressedImage，需要解码
+            ]
+        ),
+
         # --- Hazard Sign Detection Node: detection_node --- #
         Node(
             package='snc_challenge',
@@ -140,7 +127,7 @@ def generate_launch_description() :
             name='detection_node',
             output='screen',
             remappings=[
-                ('objects',      LaunchConfiguration('objects_path')),
+                # ('objects',      LaunchConfiguration('objects_path')),
                 ('image',        LaunchConfiguration('image_topic_repeat')),
                 ('depth',        LaunchConfiguration('depth_topic_repeat')),
                 ('camera_info',  LaunchConfiguration('camera_info_topic')),
