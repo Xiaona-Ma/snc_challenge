@@ -9,7 +9,8 @@ def generate_launch_description() :
     
     ### --- Topic and parameter definitions --- ###
     # Original topic
-    image_topic = '/camera/color/image_raw'
+    image_topic = 'oak/rgb/image_raw/compressed'
+    # image_topic = '/camera/color/image_raw'
     depth_topic = '/camera/depth/image_raw'
     camera_info_topic = '/camera/depth/camera_info'
 
@@ -69,7 +70,6 @@ def generate_launch_description() :
         DeclareLaunchArgument('image_topic_repeat', default_value=image_topic_repeat,description='Image to repeat to for find object (reliable).'),
         DeclareLaunchArgument('depth_topic_repeat', default_value=depth_topic_repeat,description='depth map topic (reliable).'),
         # DeclareLaunchArgument('camera_info_topic_repeat', default_value=camera_info_topic_repeat,description='camera internal parameters topic (reliable).'),
-        DeclareLaunchArgument('objects_topic', default_value='/objects', description='find_object_2d topic.'),
 
 
         # Path where you have saved the existing trained images
@@ -79,30 +79,30 @@ def generate_launch_description() :
         DeclareLaunchArgument('settings_path', default_value = '~/.ros/find_object_2d.ini', description = 'Config file.'),     
 
         # --- Best Effort Repeater for Image (to reliable) --- #
-        Node(
-            package='aiil_rosbot_demo',
-            executable='best_effort_repeater',
-            name='image_repeater',
-            output='screen',
-            parameters=[
-                {'sub_topic_name': LaunchConfiguration('image_topic')},
-                {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
-                {'use_compressed': False},  # 原始流是未压缩的 Image
-            ]
-        ),
+        # Node(
+        #     package='aiil_rosbot_demo',
+        #     executable='best_effort_repeater',
+        #     name='image_repeater',
+        #     output='screen',
+        #     parameters=[
+        #         {'sub_topic_name': LaunchConfiguration('image_topic')},
+        #         {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
+        #         {'use_compressed': False},  # 原始流是未压缩的 Image
+        #     ]
+        # ),
 
         # --- Best Effort Repeater for Depth Info (to reliable) --- #
-        Node(
-            package='aiil_rosbot_demo', 
-            executable='best_effort_repeater',
-            name='depth_repeater',
-            output='screen',
-            parameters=[
-                {'sub_topic_name': LaunchConfiguration('depth_topic')},
-                {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
-                {'use_compressed': True},    # 这是 CompressedImage，需要解码
-            ]
-        ),
+        # Node(
+        #     package='aiil_rosbot_demo', 
+        #     executable='best_effort_repeater',
+        #     name='depth_repeater',
+        #     output='screen',
+        #     parameters=[
+        #         {'sub_topic_name': LaunchConfiguration('depth_topic')},
+        #         {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
+        #         {'use_compressed': True},    # 这是 CompressedImage，需要解码
+        #     ]
+        # ),
 
 
         # --- Target Detection Node: find_object_2d --- #
@@ -120,6 +120,19 @@ def generate_launch_description() :
                 ('image', LaunchConfiguration('image_topic_repeat'))
         ]),
 
+        # Best Effort repeater since find_object ONLY uses reliable QoS
+        Node(
+            package='aiil_rosbot_demo',
+            executable='best_effort_repeater',
+            name='best_effort_repeater',
+            output='screen',
+            parameters=[
+                {'sub_topic_name': LaunchConfiguration('image_topic')},
+                {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
+                {'use_compressed': LaunchConfiguration('use_compressed')},
+            ]
+        ),
+
         # --- Hazard Sign Detection Node: detection_node --- #
         Node(
             package='snc_challenge',
@@ -127,7 +140,7 @@ def generate_launch_description() :
             name='detection_node',
             output='screen',
             remappings=[
-                ('objects',      LaunchConfiguration('objects_topic')),
+                ('objects',      LaunchConfiguration('objects_path')),
                 ('image',        LaunchConfiguration('image_topic_repeat')),
                 ('depth',        LaunchConfiguration('depth_topic_repeat')),
                 ('camera_info',  LaunchConfiguration('camera_info_topic')),
