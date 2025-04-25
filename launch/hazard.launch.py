@@ -27,49 +27,51 @@ def generate_launch_description() :
 
 
        # --- Launch Arguments --- #
-       DeclareLaunchArgument('gui', default_value='true', description='Launch GUI.'),
        DeclareLaunchArgument('image_topic', default_value=image_topic, description='Image topic from the camera (best_effort).'),
-       DeclareLaunchArgument('depth_topic', default_value=depth_topic, description='Original depth map topic。'),
-       DeclareLaunchArgument('camera_info_topic', default_value=camera_info_topic, description='Original camera internal parameters topic.'),
-       DeclareLaunchArgument('use_compressed', default_value=use_compressed, description='Determine if compressed image is to be used.'),
-      
        DeclareLaunchArgument('image_topic_repeat', default_value=image_topic_repeat,description='Image to repeat to for find object (reliable).'),
-       DeclareLaunchArgument('depth_topic_repeat', default_value=depth_topic_repeat,description='depth map topic (reliable).'),
-       # DeclareLaunchArgument('camera_info_topic_repeat', default_value=camera_info_topic_repeat,description='camera internal parameters topic (reliable).'),
 
-       # Path where you have saved the existing trained images
-       # LogInfo(msg=('AIIL_CHECKOUT_DIR, ', EnvironmentVariable(name='AIIL_CHECKOUT_DIR'))),
+       DeclareLaunchArgument('depth_topic', default_value=depth_topic, description='Original depth map topic。'),
+       DeclareLaunchArgument('depth_topic_repeat', default_value=depth_topic_repeat,description='depth map topic (reliable).'),
+
+       DeclareLaunchArgument('camera_info_topic', default_value=camera_info_topic, description='Original camera internal parameters topic.'),
+       
+       DeclareLaunchArgument('gui', default_value='true', description='Launch GUI.'),
+       DeclareLaunchArgument('use_compressed', default_value=use_compressed, description='Determine if compressed image is to be used.'),
+
+
        DeclareLaunchArgument('objects_path', default_value = [EnvironmentVariable(name='AIIL_CHECKOUT_DIR'),'/humble_workspace/src/snc_challenge/objects'], description = 'Path to the training images'),
        # Find Object 2D Setting. By default just use the standard settings
        DeclareLaunchArgument('settings_path', default_value = '~/.ros/find_object_2d.ini', description = 'Config file.'),    
 
        # --- Target Detection Node: find_object_2d --- #
        Node(
-           package='find_object_2d',
-           executable='find_object_2d',
-           output='screen',
-           parameters=[{
-             'subscribe_depth': False, # True,
-             'gui': LaunchConfiguration('gui'),
-             'objects_path': LaunchConfiguration('objects_path'),          # Path to the training images
-             'settings_path': LaunchConfiguration('settings_path')         # Path to the config file
-           }],
-           remappings=[
-               ('image', LaunchConfiguration('image_topic_repeat'))
-       ]),
+            package='find_object_2d',
+            executable='find_object_2d',
+            output='screen',
+            parameters=[{
+              'subscribe_depth': False, # True,
+              'gui': LaunchConfiguration('gui'),
+              'objects_path': LaunchConfiguration('objects_path'),
+              'settings_path': LaunchConfiguration('settings_path')
+            }],
+            remappings=[
+                ('image', LaunchConfiguration('image_topic_repeat')),
+                # ('depth_registered/image_raw', LaunchConfiguration('depth_topic_repeat')),
+                # ('depth_registered/camera_info', LaunchConfiguration('camera_info_topic_repeat')),
+        ]),
 
-       # Best Effort repeater since find_object ONLY uses reliable QoS
-       Node(
-           package='aiil_rosbot_demo',
-           executable='best_effort_repeater',
-           name='best_effort_repeater',
-           output='screen',
-           parameters=[
-               {'sub_topic_name': LaunchConfiguration('image_topic')},
-               {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
-               {'use_compressed': LaunchConfiguration('use_compressed')},
-           ]
-       ),
+        # Best Effort repeater since find_object ONLY uses reliable QoS
+        Node(
+            package='aiil_rosbot_demo',
+            executable='best_effort_repeater',
+            name='best_effort_repeater',
+            output='screen',
+            parameters=[
+                {'sub_topic_name': LaunchConfiguration('image_topic')},
+                {'repeat_topic_name': LaunchConfiguration('image_topic_repeat')},
+                {'use_compressed': LaunchConfiguration('use_compressed')},
+            ]
+        ),
 
        # --- Hazard Sign Detection Node: detection_node --- #
        Node(
@@ -78,7 +80,7 @@ def generate_launch_description() :
            name='detection_node',
            output='screen',
            remappings=[
-               # ('objects',      LaunchConfiguration('objects_path')),
+               ('objects',      LaunchConfiguration('objects_path')),
                ('image',        LaunchConfiguration('image_topic_repeat')),
                ('depth',        LaunchConfiguration('depth_topic_repeat')),
                ('camera_info',  LaunchConfiguration('camera_info_topic')),
