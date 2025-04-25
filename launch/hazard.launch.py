@@ -24,37 +24,6 @@ def generate_launch_description() :
 
 
     return LaunchDescription([
-        # —— 静态广播 map → base_link —— #
-        # Node(
-        #     package='tf2_ros',
-        #     executable='static_transform_publisher',
-        #     name='static_map_to_base_link',
-        #     output='screen',
-        #     arguments=[
-        #         # x y z qx qy qz qw parent child period
-        #         '0','0','0',  
-        #         '0','0','0','1',  
-        #         'map',
-        #         'base_link',
-        #         '0.05'
-        #     ]
-        # ),
-
-        # Node(
-        #     package='slam_toolbox',
-        #     executable='async_slam_toolbox_node',
-        #     name='slam_toolbox',
-        #     output='screen',
-        #     parameters=[
-        #     os.path.join(
-        #         get_package_share_directory('snc_challenge'),
-        #         'config',
-        #         'slam.yaml'
-        #     ),
-        #     {'mode':'mapping'},         # mapping 模式
-        #     {'use_sim_time': False},
-        #     ]
-        # ),
 
         # --- Log Output Settings --- #
         SetEnvironmentVariable('RCUTILS_LOGGING_USE_STDOUT', '1'),
