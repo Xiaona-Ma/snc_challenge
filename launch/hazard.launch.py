@@ -25,20 +25,20 @@ def generate_launch_description() :
 
     return LaunchDescription([
         # —— 静态广播 map → base_link —— #
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='static_map_to_base_link',
-            output='screen',
-            arguments=[
-                # x y z qx qy qz qw parent child period
-                '0','0','0',  
-                '0','0','0','1',  
-                'map',
-                'base_link',
-                '0.05'
-            ]
-        ),
+        # Node(
+        #     package='tf2_ros',
+        #     executable='static_transform_publisher',
+        #     name='static_map_to_base_link',
+        #     output='screen',
+        #     arguments=[
+        #         # x y z qx qy qz qw parent child period
+        #         '0','0','0',  
+        #         '0','0','0','1',  
+        #         'map',
+        #         'base_link',
+        #         '0.05'
+        #     ]
+        # ),
 
         # Node(
         #     package='slam_toolbox',
@@ -73,7 +73,7 @@ def generate_launch_description() :
 
 
         # Path where you have saved the existing trained images
-        LogInfo(msg=('AIIL_CHECKOUT_DIR, ', EnvironmentVariable(name='AIIL_CHECKOUT_DIR'))),
+        # LogInfo(msg=('AIIL_CHECKOUT_DIR, ', EnvironmentVariable(name='AIIL_CHECKOUT_DIR'))),
         DeclareLaunchArgument('objects_path', default_value = [EnvironmentVariable(name='AIIL_CHECKOUT_DIR'),'/humble_workspace/src/snc_challenge/objects'], description = 'Path to the training images'),
         # Find Object 2D Setting. By default just use the standard settings
         DeclareLaunchArgument('settings_path', default_value = '~/.ros/find_object_2d.ini', description = 'Config file.'),     
