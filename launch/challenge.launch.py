@@ -25,7 +25,7 @@ def generate_launch_description():
     
     return LaunchDescription([    
 
-        # Your nodes
+        # Nodes
         Node(
             package='snc_challenge',
             executable='navigation_node_executable',
@@ -48,7 +48,8 @@ def generate_launch_description():
             executable='async_slam_toolbox_node',
             name='slam_toolbox',
             output='screen',
-            parameters=[slam_config_path, {'use_sim_time': False}]
+            parameters=[slam_config_path, {'use_sim_time': False}],
+            arguments=['--ros-args', '--log-level', 'slam_toolbox:=warn']
         ),
 
         # TF Publisher
