@@ -9,9 +9,9 @@ import math
 import time
 from collections import deque
  
-class ObstacleAvoidance(Node):
+class TrackingNode(Node):
     def __init__(self):
-        super().__init__('obstacle_avoidance')
+        super().__init__('TrackingNode')
  
         # QoS
         qos = QoSProfile(
@@ -132,7 +132,7 @@ class ObstacleAvoidance(Node):
  
 def main(args=None):
     rclpy.init(args=args)
-    node = ObstacleAvoidance()
+    node = TrackingNode()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
