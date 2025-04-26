@@ -25,8 +25,8 @@ class TrackingNode(Node):
         self.explore_path_pub = self.create_publisher(Path, '/explore_path', 10)
         self.return_path_pub = self.create_publisher(Path, '/return_path', 10)
  
-        # 
-        self.create_subscription(Empty, '/start_return_home', self.start_return_home_cb, 10)
+        # trigger home logic
+        self.create_subscription(Empty, '/trigger_home', self.start_return_home_cb, 10)
  
         # record postion timer
         self.create_timer(1.0, self.track_position)
