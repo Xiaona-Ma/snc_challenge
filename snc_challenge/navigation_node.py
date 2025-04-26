@@ -7,8 +7,6 @@ from std_msgs.msg import String
 from nav_msgs.msg import Path
 import tf2_ros
 import math
-# getting map when shut down
-import subprocess
 
 class NavigationNode(Node):
 
@@ -20,11 +18,11 @@ class NavigationNode(Node):
         self.create_timer(0.3, self.take_action) 
 
         # --- PARAMETERS ---
-        self.wall_min_distance = 0.35      # desired minimum distance to wall (m)
-        self.d_threshold = 0.8            # obstacle threshold in front (m)
-        self.forward_speed = 0.1          # linear speed
-        self.turning_speed = 0.8          # angular speed
-        self.lidar_angle_offset = math.pi # set to π if LiDAR is mounted backwards
+        self.wall_min_distance = 0.35
+        self.d_threshold = 0.8
+        self.forward_speed = 0.2
+        self.turning_speed = 0.8
+        self.lidar_angle_offset = math.pi
 
         # --- STATE ---
         self.state_ = 0
@@ -87,7 +85,7 @@ class NavigationNode(Node):
         self.get_logger().info(
             f"Regions: right={r['right']:.2f}, fright={r['fright']:.2f}, front={r['front']:.2f}, "
             f"fleft={r['fleft']:.2f}, left={r['left']:.2f}"
-    )
+        )
         cmd = Twist()
 
         right      = r['right']
@@ -97,7 +95,6 @@ class NavigationNode(Node):
         left       = r['left']
 
         wall_min = self.wall_min_distance
-        
 
         right_clear       = right > wall_min 
         fright_clear      = fright > wall_min 
@@ -109,7 +106,6 @@ class NavigationNode(Node):
 
         # --- Right-wall-following logic ---
 
-        # 1. Clear right → turn right (and fright must be clear too)
         if right_clear and fright_clear and (front > 0.3):
             cmd.linear.x = 0.15
             cmd.angular.z = -0.3
@@ -120,7 +116,6 @@ class NavigationNode(Node):
             self.get_logger().info(msg)
             return
 
-        # 2. Front blocked → turn left 
         if front_blocked and fright_close:
             cmd.linear.x = 0.0
             cmd.angular.z = self.turning_speed
@@ -131,7 +126,6 @@ class NavigationNode(Node):
             self.get_logger().info(msg)
             return
 
-        # 3. Wall close on the right, path ahead is clear → follow wall forward
         if right_wall_close and fright_close and front_clear:
             cmd.linear.x = self.forward_speed
             cmd.angular.z = 0.0
@@ -143,7 +137,6 @@ class NavigationNode(Node):
             self.record_pose()
             return
 
-        # 4. Getting too close to wall on fright? Turn slightly left
         if fright_close and front_clear:
             cmd.linear.x = self.forward_speed * 0.8
             cmd.angular.z = self.turning_speed * 0.6
@@ -154,7 +147,6 @@ class NavigationNode(Node):
             self.get_logger().info(msg)
             return
 
-        # 5. Default: move forward
         cmd.linear.x = self.forward_speed
         cmd.angular.z = 0.0
         self.change_state(0)
@@ -184,20 +176,6 @@ class NavigationNode(Node):
             self.path_pub.publish(self.path_msg)
         except (tf2_ros.LookupException, tf2_ros.ExtrapolationException):
             pass
-
-
-    # save map when finished running (TEST)
-    def destroy_node(self):
-        self.get_logger().info("Navigation node shutting down... Saving map.")
-        try:
-            subprocess.run([
-                "ros2", "run", "nav2_map_server", "map_saver_cli", "-f", "auto_saved_map"
-            ], check=True)
-            self.get_logger().info("Map saved successfully as 'auto_saved_map'.")
-        except subprocess.CalledProcessError as e:
-            self.get_logger().error(f"Failed to save map: {e}")
-        super().destroy_node()
-
 
 def main(args=None):
     rclpy.init(args=args)

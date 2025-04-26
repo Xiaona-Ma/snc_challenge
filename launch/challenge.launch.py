@@ -2,26 +2,11 @@
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import RegisterEventHandler, ExecuteProcess
-from launch.event_handlers import OnShutdown
 import os
 
 def generate_launch_description():
     config_dir = get_package_share_directory('snc_challenge')
     slam_config_path = os.path.join(config_dir, 'config', 'slam.yaml')
-
-
-    # Save map using map_saver_cli after shut down (ctrl C)
-    save_map_on_shutdown = RegisterEventHandler(
-        OnShutdown(
-            on_shutdown=[
-                ExecuteProcess(
-                    cmd=['ros2', 'run', 'nav2_map_server', 'map_saver_cli', '-f', 'auto_saved_map'],
-                    output='screen'
-                )
-            ]
-        )
-    )
     
     return LaunchDescription([    
 
