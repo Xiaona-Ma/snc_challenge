@@ -73,6 +73,18 @@ def generate_launch_description() :
             ]
         ),
 
+        Node(
+            package='aiil_rosbot_demo',
+            executable='best_effort_repeater',
+            name='depth_best_effort_repeater',
+            output='screen',
+            parameters=[
+                {'sub_topic_name': LaunchConfiguration('depth_topic')},
+                {'repeat_topic_name': LaunchConfiguration('depth_topic_repeat')},
+                {'use_compressed': 'false'}
+            ]
+        ),
+
        # --- Hazard Sign Detection Node: detection_node --- #
        Node(
            package='snc_challenge',
@@ -80,7 +92,7 @@ def generate_launch_description() :
            name='detection_node',
            output='screen',
            remappings=[
-               ('objects',      LaunchConfiguration('objects_path')),
+            #    ('objects',      LaunchConfiguration('objects_path')),
                ('image',        LaunchConfiguration('image_topic_repeat')),
                ('depth',        LaunchConfiguration('depth_topic_repeat')),
                ('camera_info',  LaunchConfiguration('camera_info_topic')),
