@@ -9,7 +9,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point, PointStamped
 from cv_bridge import CvBridge
 from tf2_ros import Buffer, TransformListener, TransformException
-from std_msgs.msg import String
+from std_msgs.msg import String, Empty
 import tf2_geometry_msgs
 import cv2
 import numpy as np
@@ -26,6 +26,7 @@ class DetectionNode(Node):
         self.last_detections = []  # Store the latest test results
         self.current_depth = None
         self.camera_info = None
+        self.camera_frame_id = None
         self.detection_history = {}  # For multi-frame verification
 
         # Tag ID mapping (as defined in the PDF)
@@ -47,7 +48,7 @@ class DetectionNode(Node):
         }
 
         # Subscribe to the output of find_object_2d
-        self.create_subscription(Float32MultiArray, 'objects', self.object_detection_callback, 10)
+        self.create_subscription(Float32MultiArray, '/objects', self.object_detection_callback, 10)
 
         # Subscribe to RGB images
         self.create_subscription(Image, 'image', self.image_callback, 10)
@@ -63,7 +64,7 @@ class DetectionNode(Node):
         
         
         self.get_logger().info("========== Detection Node Ready ===========")
-        self.status_pub.publish(String(data="========== Detection Node Ready =========="))
+        self.status_pub.publish(String(data="========== DetectionNode 已初始化，等待输入数据 =========="))
     
 
     def object_detection_callback(self, msg):
@@ -82,6 +83,8 @@ class DetectionNode(Node):
                 ]
             }
             self.last_detections.append(obj)
+        self.get_logger().info(f'===== Object of detection has been acquired =====')
+        self.get_logger().info(f'===== last_detection: {self.last_detections} =====')
 
 
     def camera_info_callback(self, msg):
@@ -93,8 +96,11 @@ class DetectionNode(Node):
                 'cx': msg.k[2],
                 'cy': msg.k[5]
             }
+            self.camera_frame_id = msg.header.frame_id
             self.get_logger().info("========== Camera internal parameters have been acquired ==========")
-            self.status_pub.publish(String(data="========== Camera internal parameters have been acquired =========="))
+            self.get_logger().info(f"========== Camera frame is: {msg.header.frame_id} ==========")
+            self.get_logger().info(f"========== fx:{msg.k[0]}, fy:{msg.k[4]}, cx:{msg.k[2]}, cy:{msg.k[5]} ==========")
+            self.status_pub.publish(String(data="========== 已获取相机内参 =========="))
 
 
     def depth_callback(self, msg):
@@ -102,70 +108,75 @@ class DetectionNode(Node):
         cvd = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
         self.current_depth = cv2.medianBlur(cvd, 5)
         self.get_logger().info("======== Depth images have been acquired ========")
-        self.status_pub.publish(String(data="========== Depth images have been acquired =========="))
+        self.status_pub.publish(String(data="========== 已获取深度图 =========="))
 
 
     # Main Process: Multi-frame Verification → Coordinate Transformation → MarkerArray Publishing
     def image_callback(self, msg):
         # 1. Waiting for necessary data
+        self.get_logger().info(f'===== image_callback of last_detections: {self.last_detections} ======')
+        self.get_logger().info(f'===== image_callback of camera_info: {self.camera_info} ======')
+        self.get_logger().info(f'===== image_callback of current_depth: {self.current_depth} ======')
+
         if not self.last_detections or self.current_depth is None or self.camera_info is None:
             self.get_logger().warn("Waiting for depth data or internal camera parameters...")
-            self.status_pub.publish(String(data="========== Waiting for depth data or internal camera parameters... ========== "))
+            self.status_pub.publish(String(data="========== 等待深度或内参… ========== "))
             return
         
-        self.status_pub.publish(String(data="========== Start processing the test results. =========="))
+        self.get_logger().info("========== 开始处理检测结果 ==========")
+        self.status_pub.publish(String(data="========== 开始处理检测结果 ========== "))
 
         markers = MarkerArray()
         for obj in self.last_detections:
             name = self._get_marker_name(obj["id"])
 
+            self.get_logger().info(f'===== id: {obj["id"]} =====')
+            self.get_logger().info(f'===== name: {name} =====')
+
             if name == "start":
                 self._process_start(obj, msg.header)
                 continue
 
-            # 2. Calculate the center pixel of the bounding box
+            # 2. 计算中心像素
             x1,y1,x2,y2 = map(int, obj["bbox"])
             cx, cy = (x1+x2)//2, (y1+y2)//2
             
-            # 3. Deep filtering: Take the median depth of a 20x20 area around the center pixel
+            # 3. 深度过滤
             h, w = self.current_depth.shape
             x1, x2 = max(0, cx - 10), min(w, cx + 10)
             y1, y2 = max(0, cy - 10), min(h, cy + 10)
             roi = self.current_depth[y1:y2, x1:x2]
-
+            # roi = self.current_depth[cy-10: cy + 10, cx-10: cx + 10]
             d = float(np.nanmedian(roi)) / 1000.0  # mm → m
-            if d <= 0 or d > 5.0:  # Only take 0~5m.
+            if d <= 0 or d > 5.0:  # 只取 0~5m
                 continue
-
-            # 4. Pixel → camera coordinates
+            # 4. 像素 → 相机坐标
             pc = PointStamped()
             pc.header = msg.header
             pc.point.x = (cx - self.camera_info['cx']) * d / self.camera_info['fx']
             pc.point.y = (cy - self.camera_info['cy']) * d / self.camera_info['fy']
             pc.point.z = d
-
-            # 5. Camera coordinates → map coordinates
+            # 5. 相机坐标 → 地图坐标（使用拍摄时刻的时间戳）
             try:
                 tf = self.tf_buffer.lookup_transform(
                     'map', 
-                    msg.header.frame_id, 
+                    # msg.header.frame_id, 
+                    'my_camera_frame',
                     msg.header.stamp,
                     timeout = Duration(seconds=0.1)
                 )
                 pm = tf2_geometry_msgs.do_transform_point(pc, tf).point
             except TransformException as e:
-                self.get_logger().warn(f"ERROR: {e}")
+                self.get_logger().warn(f"TF 失败: {e}")
                 continue
-
-            # 6. Multi-frame verification
+            # 6. 多帧验证
             mid = self.marker_ids[name]
             self.detection_history.setdefault(mid, []).append(pm)
             if len(self.detection_history[mid]) < 3:
                 continue
             avg = self._avg_point(self.detection_history[mid])
             self.detection_history[mid].clear()
-
-            # 7. Publish the marker
+            # 7. 生成并收集 Marker
             m = Marker()
             m.header.frame_id = 'map'
             m.header.stamp = self.get_clock().now().to_msg()
@@ -181,53 +192,59 @@ class DetectionNode(Node):
             m.color.r = 1.0; m.color.a = 0.8
             markers.markers.append(m)
 
+        self.status_pub.publish(String(data=f"========== 多帧验证完成，准备发布 {len(markers.markers)} 个标志 =========="))
         for m in markers.markers:
             self.marker_pub.publish(m)
-            self.status_pub.publish(String(data=f"========== Publishing hazard {name}, {m.id} =========="))
-            self.status_pub.publish(String(data=f"========== Publishing hazard id={m.id}, name={name} =========="))
+            self.status_pub.publish(String(data=f"========== Publishing hazard id={m.id} =========="))
 
     # Process the start marker
     def _process_start(self, obj, header):
-        # 1. Calculate the central pixel of the bounding box
+        # 1. 计算中心像素
         x1, y1, x2, y2 = obj["bbox"]
         cx = int((x1 + x2) / 2)
         cy = int((y1 + y2) / 2)
 
-        # 2. Take the median depth of 20×20 area from current_depth.
+        # 2. 从 current_depth 中取 20×20 区域的中值深度
         roi = self.current_depth[cy-10:cy+10, cx-10:cx+10]
         depth_val = float(np.nanmedian(roi)) / 1000.0  # mm → m
-        # Depth validity check
+        # 深度有效性检查
         if depth_val <= 0.0 or depth_val > 5.0:
-            self.get_logger().warn(f"======== ERROR with Start flag depth: {depth_val} ========")
+            self.get_logger().warn(f"======== Start 标志深度异常：{depth_val} ========")
             return
 
-        # 3. Pixel → camera coordinates
+        # 3. 像素 → 相机坐标
         point_cam = PointStamped()
         point_cam.header = header
         point_cam.point.x = (cx - self.camera_info['cx']) * depth_val / self.camera_info['fx']
         point_cam.point.y = (cy - self.camera_info['cy']) * depth_val / self.camera_info['fy']
         point_cam.point.z = depth_val
 
-        # 4. Camera coordinates → map coordinates
+        # 4. 相机坐标 → 地图坐标（使用图像的时间戳保持同步）
         try:
+            frame = self.camera_frame_id
+            if not frame :
+                self.get_logger().error("No camera_frame_id yet, cannot do TF!")
+                return
+            
             tf = self.tf_buffer.lookup_transform(
-                'map',
-                header.frame_id,
-                header.stamp,
+                'map',               # 目标坐标系
+                # frame,     # 源坐标系，通常是 camera_link
+                'my_camera_frame',
+                header.stamp,        # 使用图像的时间戳
                 timeout = Duration(seconds=0.1)
             )
             point_map = tf2_geometry_msgs.do_transform_point(point_cam, tf)
         except TransformException as e:
-            self.get_logger().warn(f"======== ERROR with Start of TF conversion failed,{e} ========")
+            self.get_logger().warn(f"======== Start 标志 TF 转换失败：{e} ========")
             return
 
-        # 5. publish to /start_marker
+        # 5. 发布到 /start_marker
         start_msg = PointStamped()
         start_msg.header.frame_id = 'map'
         start_msg.header.stamp = self.get_clock().now().to_msg()
         start_msg.point = point_map.point
         self.start_marker_pub.publish(start_msg)
-        self.get_logger().info("========  Start Marker has been detected and released! ========")
+        self.get_logger().info("========  Start Marker 已检测并发布！ ========")
 
 
     def _avg_point(self, points):
