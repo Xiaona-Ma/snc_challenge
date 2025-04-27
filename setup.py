@@ -12,7 +12,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name), glob('launch/*.launch.py'))
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -24,7 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             f'navigation_node_executable = {package_name}.navigation_node:main',
-            f'detection_node = {package_name}.detection_node:main',
+            f'detection_node_executable = {package_name}.detection_node:main',
             f'tracking_node_executable = {package_name}.tracking_node:main',
             'best_effort_repeater = aiil_rosbot_demo.best_effort_repeater:main',
         ],

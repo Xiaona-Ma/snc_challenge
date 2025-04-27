@@ -1,8 +1,7 @@
 from launch import LaunchDescription
+from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, LogInfo
 from launch.substitutions import LaunchConfiguration, EnvironmentVariable
-from launch_ros.actions import Node
-from ament_index_python.packages import get_package_share_directory
 import os
 
 
@@ -115,7 +114,7 @@ def generate_launch_description() :
        # --- Hazard Sign Detection Node: detection_node --- #
        Node(
            package='snc_challenge',
-           executable='detection_node',
+           executable='detection_node_executable',
            name='detection_node',
            output='screen',
            remappings=[

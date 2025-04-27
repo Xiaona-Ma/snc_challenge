@@ -1,147 +1,119 @@
-
-#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from rclpy.action import ActionClient
+from nav2_msgs.action import FollowWaypoints
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Empty
+from tf2_ros import TransformListener, Buffer
 import math
-import time
-from collections import deque
  
-class ObstacleAvoidance(Node):
+ 
+class TrackingNode(Node):
     def __init__(self):
-        super().__init__('obstacle_avoidance')
+        super().__init__('tracking_node')
  
-        # QoS
-        qos = QoSProfile(
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
-            history=QoSHistoryPolicy.KEEP_LAST,
-            depth=10
-        )
+        # TF Setup
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
  
-        self.laser_sub = self.create_subscription(LaserScan, '/scan', self.laser_callback, qos)
-        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        # record path
+        self.explore_path = []
+        self.return_path = []
  
-        # parameter setting
-        self.linear_speed = 0.25
-        self.angular_speed = 0.3
-        self.safety_dist = 0.6
-        self.side_angle = 60
-        self.front_angle = 60
-        self.clear_threshold = 1.2
-        self.turn_check_angle = 45
+        # publish path
+        self.explore_path_pub = self.create_publisher(Path, '/explore_path', 10)
+        self.return_path_pub = self.create_publisher(Path, '/return_path', 10)
  
-        # status
-        self.front_clear = True
-        self.left_clearance = 0.0
-        self.right_clearance = 0.0
-        self.is_turning = False
-        self.turn_direction = 0
+        # trigger home logic
+        self.create_subscription(Empty, '/trigger_home', self.start_return_home_cb, 10)
  
-        # path recording and timer
-        self.motion_log = deque()
-        self.start_time = time.time()
-        self.max_explore_time = 30.0
-        self.is_returning = False
+        # record postion timer
+        self.create_timer(1.0, self.track_position)
  
-        self.timer = self.create_timer(0.1, self.control_loop)
-        self.get_logger().info("=== robot started ===")
+        # Action client
+        self.action_client = ActionClient(self, FollowWaypoints, 'follow_waypoints')
  
-    def laser_callback(self, msg):
-        def get_sector_min_distance(center_angle, angle_width):
-            compensated_angle = center_angle + 180
-            start_angle = math.radians(compensated_angle - angle_width/2)
-            end_angle = math.radians(compensated_angle + angle_width/2)
-            start_idx = int((start_angle - msg.angle_min) / msg.angle_increment)
-            end_idx = int((end_angle - msg.angle_min) / msg.angle_increment)
-            step = 1 if start_idx <= end_idx else -1
-            min_dist = float('inf')
-            for idx in range(start_idx, end_idx + step, step):
-                if 0 <= idx < len(msg.ranges):
-                    dist = msg.ranges[idx]
-                    if msg.range_min < dist < msg.range_max:
-                        min_dist = min(min_dist, dist)
-            return min_dist
+    def track_position(self):
+        try:
+            now = rclpy.time.Time()
+            trans = self.tf_buffer.lookup_transform('map', 'base_link', now)
  
-        self.front_clearance = get_sector_min_distance(0, self.front_angle)
-        self.left_clearance = get_sector_min_distance(90, self.side_angle)
-        self.right_clearance = get_sector_min_distance(-90, self.side_angle)
+            pose = PoseStamped()
+            pose.header.frame_id = 'map'
+            pose.header.stamp = self.get_clock().now().to_msg()
+            pose.pose.position.x = trans.transform.translation.x
+            pose.pose.position.y = trans.transform.translation.y
+            pose.pose.position.z = trans.transform.translation.z
+            pose.pose.orientation = trans.transform.rotation
  
-        check_angle = self.turn_check_angle if self.is_turning else self.front_angle
-        self.front_clear = get_sector_min_distance(0, check_angle) > self.safety_dist
+            if not self.explore_path or self._is_far_enough(self.explore_path[-1], pose):
+                self.explore_path.append(pose)
  
-        self.get_logger().info(
-            f"status: {'turning' if self.is_turning else 'moving forward'} | "
-            f"distance to front: {self.front_clearance:.2f}m | "
-            f"turning side: {'left' if self.turn_direction==1 else 'right' if self.turn_direction==-1 else 'none'}",
-            throttle_duration_sec=0.5
-        )
+            # publish explored path
+            path_msg = Path()
+            path_msg.header.frame_id = 'map'
+            path_msg.header.stamp = self.get_clock().now().to_msg()
+            path_msg.poses = self.explore_path
+            self.explore_path_pub.publish(path_msg)
  
-    def control_loop(self):
-        current_time = time.time()
-        elapsed = current_time - self.start_time
-        cmd = Twist()
+        except Exception as e:
+            self.get_logger().warn(f"TF lookup failed: {str(e)}")
  
-        # ========== return home logic ==========
-        if elapsed >= self.max_explore_time and not self.is_returning:
-            self.get_logger().info("explore ended，start returning home")
-            self.is_returning = True
-            self.motion_log = deque(reversed(self.motion_log))
-            return  
+    def _is_far_enough(self, last_pose, new_pose, threshold=0.15):
+        dx = last_pose.pose.position.x - new_pose.pose.position.x
+        dy = last_pose.pose.position.y - new_pose.pose.position.y
+        return math.hypot(dx, dy) > threshold
  
-        if self.is_returning:
-            if self.motion_log:
-                past_cmd = self.motion_log.popleft()
-                cmd.linear.x = -past_cmd.linear.x
-                cmd.angular.z = -past_cmd.angular.z
-                self.cmd_pub.publish(cmd)
-            else:
-                self.get_logger().info("returned home")
-                stop_cmd = Twist()
-                self.cmd_pub.publish(stop_cmd)
-                self.destroy_node()
-                rclpy.shutdown()
+    def start_return_home_cb(self, msg):
+        self.get_logger().info("start return home!way points publishing ready...")
+        reversed_path = list(reversed(self.explore_path))
+        self.return_path = reversed_path
+ 
+        # publish return home path
+        return_path_msg = Path()
+        return_path_msg.header.frame_id = 'map'
+        return_path_msg.header.stamp = self.get_clock().now().to_msg()
+        return_path_msg.poses = self.return_path
+        self.return_path_pub.publish(return_path_msg)
+ 
+        self.send_waypoints_goal(self.return_path)
+ 
+    def send_waypoints_goal(self, waypoints):
+        # wait Action Server 
+        if not self.action_client.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error('FollowWaypoints action server not available!')
             return
  
-        # ========== explore/avoid obstcle==========
-        if not self.front_clear and not self.is_turning:
-            self.is_turning = True
-            self.turn_direction = 1 if self.left_clearance > self.right_clearance else -1
-            self.get_logger().warning(f"start {'left' if self.turn_direction==1 else 'right'} avoid obstcle")
-        
-        if self.is_turning:
-            cmd.linear.x = 0.0
-            cmd.angular.z = self.angular_speed * self.turn_direction
-            if self.front_clear and self.front_clearance > self.clear_threshold:
-                self.is_turning = False
-                self.turn_direction = 0
-                self.get_logger().info("turning is complete, moving forward")
-        else:
-            cmd.linear.x = self.linear_speed
-            cmd.angular.z = 0.0
+        goal_msg = FollowWaypoints.Goal()
+        goal_msg.poses = waypoints
  
-        # Record the movement trajectory (only during the exploration phase).
-        if elapsed < self.max_explore_time:
-            saved_cmd = Twist()
-            saved_cmd.linear.x = cmd.linear.x
-            saved_cmd.angular.z = cmd.angular.z
-            self.motion_log.append(saved_cmd)
+        self.get_logger().info(f"send {len(waypoints)} way points...")
+        self._send_goal_future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_cb)
+        self._send_goal_future.add_done_callback(self.goal_response_cb)
  
-        self.cmd_pub.publish(cmd)
+    def feedback_cb(self, feedback_msg):
+        current_idx = feedback_msg.feedback.current_waypoint
+        self.get_logger().info(f'reached points {current_idx}')
+ 
+    def goal_response_cb(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().error('goal was rejected')
+            return
+ 
+        self.get_logger().info('goal acccept,under progress...')
+        self._get_result_future = goal_handle.get_result_async()
+        self._get_result_future.add_done_callback(self.result_cb)
+ 
+    def result_cb(self, future):
+        result = future.result().result
+        self.get_logger().info(f'path finished!way points skipped: {result.missed_waypoints}')
+ 
  
 def main(args=None):
     rclpy.init(args=args)
-    node = ObstacleAvoidance()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        stop_cmd = Twist()
-        node.cmd_pub.publish(stop_cmd)
-        node.get_logger().info("robot has been stopped")
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
- 
-if __name__ == '__main__':
-    main()
+    node = TrackingNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()

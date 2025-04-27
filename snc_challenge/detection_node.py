@@ -9,7 +9,8 @@ from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point, PointStamped
 from cv_bridge import CvBridge
 from tf2_ros import Buffer, TransformListener, TransformException
-from std_msgs.msg import String, Empty
+from std_msgs.msg import String
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 import tf2_geometry_msgs
 import cv2
 import numpy as np
@@ -47,15 +48,27 @@ class DetectionNode(Node):
             "start": 13,
         }
 
+        qos_reliable = QoSProfile(
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+        # Best-Effort 用于 图像和深度图
+        qos_best_effort = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+
         # Subscribe to the output of find_object_2d
-        self.create_subscription(Float32MultiArray, '/objects', self.object_detection_callback, 10)
+        self.create_subscription(Float32MultiArray, '/objects', self.object_detection_callback, qos_reliable)
 
         # Subscribe to RGB images
-        self.create_subscription(Image, 'image', self.image_callback, 10)
+        self.create_subscription(Image, 'image', self.image_callback, qos_best_effort)
         
         # Subscribe to Depth Images and Camera Insights
-        self.create_subscription(Image, 'depth', self.depth_callback, 10)
-        self.create_subscription(CameraInfo, 'camera_info', self.camera_info_callback, 10)
+        self.create_subscription(Image, 'depth', self.depth_callback, qos_best_effort)
+        self.create_subscription(CameraInfo, 'camera_info', self.camera_info_callback, qos_reliable)
         
         # Issuance of detected hazard markers
         self.marker_pub = self.create_publisher(Marker, 'hazards', 10)
@@ -161,7 +174,8 @@ class DetectionNode(Node):
                 tf = self.tf_buffer.lookup_transform(
                     'map', 
                     # msg.header.frame_id, 
-                    'my_camera_frame',
+                    # 'my_camera_frame',
+                    self.camera_frame_id,
                     msg.header.stamp,
                     timeout = Duration(seconds=0.1)
                 )
@@ -221,15 +235,15 @@ class DetectionNode(Node):
 
         # 4. 相机坐标 → 地图坐标（使用图像的时间戳保持同步）
         try:
-            frame = self.camera_frame_id
-            if not frame :
+            if not self.camera_frame_id :
                 self.get_logger().error("No camera_frame_id yet, cannot do TF!")
                 return
             
             tf = self.tf_buffer.lookup_transform(
                 'map',               # 目标坐标系
                 # frame,     # 源坐标系，通常是 camera_link
-                'my_camera_frame',
+                # 'my_camera_frame',
+                self.camera_frame_id,
                 header.stamp,        # 使用图像的时间戳
                 timeout = Duration(seconds=0.1)
             )
