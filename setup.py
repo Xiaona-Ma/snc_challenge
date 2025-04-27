@@ -24,9 +24,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'navigation_node_executable = snc_challenge.navigation_node:main',
-            'detection_node_executable = snc_challenge.detection_node:main',
-            'tracking_node_executable = snc_challenge.tracking_node:main',
+            f'navigation_node_executable = {package_name}.navigation_node:main',
+            f'detection_node_executable = {package_name}.detection_node:main',
+            f'tracking_node_executable = {package_name}.tracking_node:main',
+            'best_effort_repeater = aiil_rosbot_demo.best_effort_repeater:main',
         ],
     },
 )
